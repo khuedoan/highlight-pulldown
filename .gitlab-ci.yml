@@ -1,0 +1,34 @@
+image: "rust:latest"
+
+variables:
+  # Move cargo data into the project directory so it can be cached
+  CARGO_HOME: ${CI_PROJECT_DIR}/.cargo
+
+default:
+  interruptible: true
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}  # Share cache between all jobs on one branch/tag
+    paths:
+      - .cargo
+      - target
+
+cargo:fmt:
+  script:
+    - rustup component add rustfmt
+    - cargo fmt --check
+
+cargo:clippy:
+  script:
+    - rustup component add clippy
+    - cargo clippy --all-targets
+
+cargo:test:
+  needs: ["cargo:clippy"]
+  script:
+    - apt-get update -qq && apt-get -y install git # to test that `kobold init` creates a git repo
+    - mkdir -p $CARGO_HOME/bin && curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C $CARGO_HOME/bin
+    - cargo nextest run --profile ci
+  artifacts:
+    when: always
+    reports:
+      junit: $CI_PROJECT_DIR/target/nextest/ci/junit.xml
