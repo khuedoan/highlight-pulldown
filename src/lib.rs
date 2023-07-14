@@ -67,9 +67,11 @@ pub enum Error {
 }
 
 /// Apply syntax highlighting to pulldown-cmark events using the specified theme.
+///
 /// Take an iterator over pulldown-cmark's events, and (on success) return a new iterator
 /// where code blocks have been turned into HTML text blocks with syntax highlighting.
-/// Based on https://github.com/raphlinus/pulldown-cmark/issues/167#issuecomment-448491422 .
+///
+/// Based on <https://github.com/raphlinus/pulldown-cmark/issues/167#issuecomment-448491422>.
 pub fn highlight_with_theme<'a, It>(events: It, theme: &str) -> Result<Vec<Event<'a>>, Error>
 where
     It: Iterator<Item = Event<'a>>,
@@ -127,9 +129,11 @@ where
 }
 
 /// Apply syntax highlighting to pulldown-cmark events using the default theme.
+///
 /// Take an iterator over pulldown-cmark's events, and (on success) return a new iterator
 /// where code blocks have been turned into HTML text blocks with syntax highlighting.
-/// Based on https://github.com/raphlinus/pulldown-cmark/issues/167#issuecomment-448491422 .
+///
+/// Based on <https://github.com/raphlinus/pulldown-cmark/issues/167#issuecomment-448491422>.
 pub fn highlight<'a, It>(events: It) -> Result<Vec<Event<'a>>, Error>
 where
     It: Iterator<Item = Event<'a>>,
