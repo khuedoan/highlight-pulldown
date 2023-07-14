@@ -15,11 +15,6 @@ code blocks have been substituted by HTML blocks containing highlighted code.
 
 ```rust
 let markdown = r#"
-```python
-print("foo", 42)
-\`\`\`
-
-And here's some Rust code:
 ```rust
 enum Hello {
     World,
@@ -27,9 +22,12 @@ enum Hello {
 }
 \`\`\`
 "#;
-
 let events = pulldown_cmark::Parser::new(markdown);
+
+// apply a syntax highlighting pass to the pulldown_cmark events
 let events = highlight_with_theme(events, "base16-ocean.dark").unwrap();
+
+// emit HTML or further process the events as usual
 let mut html = String::new();
 pulldown_cmark::html::push_html(&mut html, events.into_iter());
 ```
