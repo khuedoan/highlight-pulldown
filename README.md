@@ -20,8 +20,7 @@ enum Hello {
     World,
     SyntaxHighlighting,
 }
-\`\`\`
-"#;
+```"#;
 let events = pulldown_cmark::Parser::new(markdown);
 
 // apply a syntax highlighting pass to the pulldown_cmark events
