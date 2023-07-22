@@ -33,6 +33,9 @@ let mut html = String::new();
 pulldown_cmark::html::push_html(&mut html, events.into_iter());
 ```
 
+For better efficiency, instead of invoking `highlight` or `highlight_with_theme` in a hot
+loop consider creating a `PulldownHighlighter` object once and use it many times.
+
 ## Contributing
 
 If you happen to use this package, any feedback is more than welcome.

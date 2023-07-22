@@ -47,6 +47,9 @@
 //! pulldown_cmark::html::push_html(&mut html, events.into_iter());
 //! ```
 //!
+//! For better efficiency, instead of invoking `highlight` or `highlight_with_theme` in a hot
+//! loop consider creating a PulldownHighlighter object once and use it many times.
+//!
 //! ## Contributing
 //!
 //! If you happen to use this package, any feedback is more than welcome.
@@ -67,66 +70,106 @@ pub enum Error {
     HighlightError(#[from] syntect::Error),
 }
 
+pub struct PulldownHighlighter {
+    syntaxset: SyntaxSet,
+    themeset: ThemeSet,
+    theme: String,
+}
+
+/// A highlighter that can be instantiated once and used many times for better performance.
+impl PulldownHighlighter {
+    pub fn new(theme: &str) -> Result<PulldownHighlighter, Error> {
+        let syntaxset = SyntaxSet::load_defaults_newlines();
+        let themeset = ThemeSet::load_defaults();
+
+        // check that the theme exists
+        themeset
+            .themes
+            .get(theme)
+            .ok_or(Error::InvalidTheme(theme.to_string()))?;
+
+        Ok(PulldownHighlighter {
+            syntaxset,
+            themeset,
+            theme: theme.to_string(),
+        })
+    }
+
+    /// Apply syntax highlighting to pulldown-cmark events using this instance's theme.
+    ///
+    /// Take an iterator over pulldown-cmark's events, and (on success) return a new iterator
+    /// where code blocks have been turned into HTML text blocks with syntax highlighting.
+    ///
+    /// Implementation based on <https://github.com/raphlinus/pulldown-cmark/issues/167#issuecomment-448491422>.
+    pub fn highlight<'a, It>(self, events: It) -> Result<Vec<Event<'a>>, Error>
+    where
+        It: Iterator<Item = Event<'a>>,
+    {
+        let mut in_code_block = false;
+
+        let mut syntax = self.syntaxset.find_syntax_plain_text();
+
+        let theme = self
+            .themeset
+            .themes
+            .get(&self.theme)
+            .ok_or(Error::InvalidTheme(self.theme))?;
+
+        let mut to_highlight = String::new();
+        let mut out_events = Vec::new();
+
+        for event in events {
+            match event {
+                Event::Start(Tag::CodeBlock(kind)) => {
+                    match kind {
+                        CodeBlockKind::Fenced(lang) => {
+                            syntax = self.syntaxset.find_syntax_by_token(&lang).unwrap_or(syntax)
+                        }
+                        CodeBlockKind::Indented => {}
+                    }
+                    in_code_block = true;
+                }
+                Event::End(Tag::CodeBlock(_)) => {
+                    if !in_code_block {
+                        panic!("this should never happen");
+                    }
+                    let html =
+                        highlighted_html_for_string(&to_highlight, &self.syntaxset, syntax, theme)?;
+
+                    to_highlight.clear();
+                    in_code_block = false;
+                    out_events.push(Event::Html(CowStr::from(html)));
+                }
+                Event::Text(t) => {
+                    if in_code_block {
+                        to_highlight.push_str(&t);
+                    } else {
+                        out_events.push(Event::Text(t));
+                    }
+                }
+                e => {
+                    out_events.push(e);
+                }
+            }
+        }
+
+        Ok(out_events)
+    }
+}
+
 /// Apply syntax highlighting to pulldown-cmark events using the specified theme.
 ///
 /// Take an iterator over pulldown-cmark's events, and (on success) return a new iterator
 /// where code blocks have been turned into HTML text blocks with syntax highlighting.
 ///
-/// Based on <https://github.com/raphlinus/pulldown-cmark/issues/167#issuecomment-448491422>.
+/// It might be time-consuming to call this method in a hot loop: in that situation you
+/// might want to use a PulldownHighlighter object instead.
 pub fn highlight_with_theme<'a, It>(events: It, theme: &str) -> Result<Vec<Event<'a>>, Error>
 where
     It: Iterator<Item = Event<'a>>,
 {
-    let mut in_code_block = false;
-
-    let ss = SyntaxSet::load_defaults_newlines();
-    let ts = ThemeSet::load_defaults();
-
-    let mut syntax = ss.find_syntax_plain_text();
-
-    let theme = ts
-        .themes
-        .get(theme)
-        .ok_or(Error::InvalidTheme(theme.to_string()))?;
-
-    let mut to_highlight = String::new();
-    let mut out_events = Vec::new();
-
-    for event in events {
-        match event {
-            Event::Start(Tag::CodeBlock(kind)) => {
-                match kind {
-                    CodeBlockKind::Fenced(lang) => {
-                        syntax = ss.find_syntax_by_token(&lang).unwrap_or(syntax)
-                    }
-                    CodeBlockKind::Indented => {}
-                }
-                in_code_block = true;
-            }
-            Event::End(Tag::CodeBlock(_)) => {
-                if !in_code_block {
-                    panic!("this should never happen");
-                }
-                let html = highlighted_html_for_string(&to_highlight, &ss, syntax, theme)?;
-
-                to_highlight.clear();
-                in_code_block = false;
-                out_events.push(Event::Html(CowStr::from(html)));
-            }
-            Event::Text(t) => {
-                if in_code_block {
-                    to_highlight.push_str(&t);
-                } else {
-                    out_events.push(Event::Text(t));
-                }
-            }
-            e => {
-                out_events.push(e);
-            }
-        }
-    }
-
-    Ok(out_events)
+    let highlighter = PulldownHighlighter::new(theme)?;
+    highlighter.highlight(events)
 }
 
 /// Apply syntax highlighting to pulldown-cmark events using the default theme.
@@ -134,7 +177,8 @@ where
 /// Take an iterator over pulldown-cmark's events, and (on success) return a new iterator
 /// where code blocks have been turned into HTML text blocks with syntax highlighting.
 ///
-/// Based on <https://github.com/raphlinus/pulldown-cmark/issues/167#issuecomment-448491422>.
+/// It might be time-consuming to call this method in a hot loop: in that situation you
+/// might want to use a PulldownHighlighter object instead.
 pub fn highlight<'a, It>(events: It) -> Result<Vec<Event<'a>>, Error>
 where
     It: Iterator<Item = Event<'a>>,
