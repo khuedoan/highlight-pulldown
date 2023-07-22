@@ -28,6 +28,8 @@
 //! code blocks have been substituted by HTML blocks containing highlighted code.
 //!
 //! ```rust
+//! use highlight_pulldown::highlight_with_theme;
+//!
 //! let markdown = r#"
 //! ```rust
 //! enum Hello {
