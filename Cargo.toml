@@ -8,6 +8,7 @@ homepage = "https://crates.io/crates/highlight-pulldown"
 repository = "https://gitlab.com/eguiraud/highlight-pulldown"
 keywords = ["markdown", "highlighter", "syntax-highlighting"]
 categories = ["text-processing"]
+documentation = "https://docs.rs/highlight-pulldown"
 
 [dependencies]
 syntect = "5.0.0"
