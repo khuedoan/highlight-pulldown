@@ -101,7 +101,7 @@ impl PulldownHighlighter {
     /// where code blocks have been turned into HTML text blocks with syntax highlighting.
     ///
     /// Implementation based on <https://github.com/raphlinus/pulldown-cmark/issues/167#issuecomment-448491422>.
-    pub fn highlight<'a, It>(self, events: It) -> Result<Vec<Event<'a>>, Error>
+    pub fn highlight<'a, It>(&self, events: It) -> Result<Vec<Event<'a>>, Error>
     where
         It: Iterator<Item = Event<'a>>,
     {
@@ -113,7 +113,7 @@ impl PulldownHighlighter {
             .themeset
             .themes
             .get(&self.theme)
-            .ok_or(Error::InvalidTheme(self.theme))?;
+            .ok_or(Error::InvalidTheme(self.theme.clone()))?;
 
         let mut to_highlight = String::new();
         let mut out_events = Vec::new();
