@@ -11,6 +11,6 @@ categories = ["text-processing"]
 documentation = "https://docs.rs/highlight-pulldown"
 
 [dependencies]
-syntect = "5.0.0"
+syntect = { version = "5.1.0", default-features = false, features = ["default-fancy"]}
 pulldown-cmark = "0.9.3"
 thiserror = "1.0.43"
